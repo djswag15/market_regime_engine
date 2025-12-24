@@ -70,6 +70,102 @@ void print_regime_performance(Strategy& strat, const TimeSeries& prices,
     }
 }
 
+void generate_regime_report(const TimeSeries& prices,
+                           const std::vector<int>& regimes,
+                           size_t num_regimes,
+                           const Matrix& X) {
+    
+    std::cout << "\n";
+    std::cout << "========================================================================\n";
+    std::cout << "           REGIME-CONDITIONED STRATEGY ATTRIBUTION REPORT              \n";
+    std::cout << "========================================================================\n\n";
+
+    // 1. REGIME TIMELINE SUMMARY
+    std::cout << "📊 REGIME TIMELINE SUMMARY\n";
+    std::cout << "------------------------------------------------------------------------\n";
+    std::cout << "Total trading days analyzed: " << regimes.size() << "\n";
+    std::cout << "Number of regimes detected: " << num_regimes << "\n\n";
+
+    std::vector<int> counts(num_regimes, 0);
+    std::vector<double> avg_vol(num_regimes, 0.0);
+    std::vector<double> avg_dd(num_regimes, 0.0);
+
+    for (size_t i = 0; i < regimes.size(); ++i) {
+        int regime = regimes[i];
+        counts[regime]++;
+        avg_vol[regime] += X(i, 0);  // volatility
+        avg_dd[regime] += X(i, 1);   // drawdown
+    }
+
+    std::cout << "Regime Characteristics:\n";
+    for (size_t i = 0; i < num_regimes; ++i) {
+        double pct = 100.0 * counts[i] / regimes.size();
+        avg_vol[i] /= counts[i];
+        avg_dd[i] /= counts[i];
+        
+        std::string regime_type;
+        if (avg_vol[i] < 0.15) regime_type = "LOW VOLATILITY";
+        else if (avg_vol[i] < 0.25) regime_type = "NORMAL";
+        else regime_type = "HIGH VOLATILITY/CRISIS";
+
+        std::cout << "\n  Regime " << i << " [" << regime_type << "]:\n";
+        std::cout << "    Duration: " << counts[i] << " days (" 
+                  << std::fixed << std::setprecision(1) << pct << "% of sample)\n";
+        std::cout << "    Avg Volatility: " << std::setprecision(2) 
+                  << avg_vol[i] * 100 << "%\n";
+        std::cout << "    Avg Drawdown: " << std::setprecision(2) 
+                  << avg_dd[i] * 100 << "%\n";
+    }
+
+    // 2. REGIME TRANSITION MATRIX
+    std::cout << "\n\n📈 REGIME TRANSITION MATRIX\n";
+    std::cout << "------------------------------------------------------------------------\n";
+    std::cout << "Probability of switching from one regime to another:\n\n";
+
+    // Calculate transition counts
+    std::vector<std::vector<int>> transitions(num_regimes, std::vector<int>(num_regimes, 0));
+    for (size_t i = 1; i < regimes.size(); ++i) {
+        transitions[regimes[i-1]][regimes[i]]++;
+    }
+
+    // Print header
+    std::cout << "       ";
+    for (size_t j = 0; j < num_regimes; ++j) {
+        std::cout << "Regime " << j << "  ";
+    }
+    std::cout << "\n";
+
+    // Print matrix
+    for (size_t i = 0; i < num_regimes; ++i) {
+        std::cout << "Reg " << i << "  ";
+        int row_total = 0;
+        for (size_t j = 0; j < num_regimes; ++j) {
+            row_total += transitions[i][j];
+        }
+        
+        for (size_t j = 0; j < num_regimes; ++j) {
+            double prob = (row_total > 0) ? (100.0 * transitions[i][j] / row_total) : 0.0;
+            std::cout << std::setw(7) << std::fixed << std::setprecision(1) 
+                      << prob << "%  ";
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << "\n💡 Key Insight: High diagonal values = regime persistence\n";
+    std::cout << "              Low diagonal values = frequent regime switching\n";
+
+    // 3. WHY THIS MATTERS
+    std::cout << "\n\n⚠️  WHY REGIME AWARENESS MATTERS\n";
+    std::cout << "------------------------------------------------------------------------\n";
+    std::cout << "• Markets exhibit structural regime shifts (not random noise)\n";
+    std::cout << "• Strategy performance is highly regime-dependent\n";
+    std::cout << "• Treating returns as stationary leads to misattributed risk\n";
+    std::cout << "• This engine separates alpha decay from regime change\n";
+    std::cout << "• Understanding regime dynamics improves risk management\n";
+
+    std::cout << "\n========================================================================\n\n";
+}
+
 int main(int argc, char* argv[]) {
     try {
         std::cout << "=== Market Regime & Strategy Attribution Engine ===" << std::endl;
@@ -100,6 +196,8 @@ int main(int argc, char* argv[]) {
         
         std::cout << "Regimes detected with inertia: " << km.get_inertia() << std::endl;
         print_regime_stats(regimes, num_regimes);
+
+        generate_regime_report(prices, regimes, num_regimes, X);
 
         std::cout << "\n=== Overall Strategy Performance ===" << std::endl;
         
