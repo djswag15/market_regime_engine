@@ -1,0 +1,9 @@
+build/
+*.exe
+*.o
+*.obj
+.vscode/
+data/sp500.csv
+.DS_Store
+*.ilk
+*.pdb
