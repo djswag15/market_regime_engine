@@ -137,3 +137,4 @@ Proprietary - Market Regime Analysis System
 ## Author
 
 djswag15 (GitHub)
+LinkedIn/email : http://www.linkedin.com/in/darnell-nziga-967695265 / nzigad@gmail.com
